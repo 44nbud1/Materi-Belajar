@@ -1,1 +1,152 @@
+Rabbit mq adalah salah satu message broker yang digunakan untuk mengirim pesan.
+Dalam spring boot rabbit mq dapat digunakan dengan menggunakan amqp (advanced messaging queuing protocol)
 
+dalam spring boot untuk memulai menggunakan amqp langkah pertama adalah menambahkan dependency amqp.
+
+		<dependency>
+			<groupId>org.springframework.amqp</groupId>
+			<artifactId>spring-rabbit-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+ 
+untuk memulai membuat programnya langkap pertama yang harus dilakukan adalah:
+
+-----------------------------------------------------------------------------------------
+PRODUCER
+
+1. membuka koneksi dari amqp
+2. mengkonversi data payload ke json. 
+
+- cara membuka koneksi dari amqp
+
+a. Membuat konfigurasi di application.properties
+   - username
+   - password
+   - virtualHost
+   - host
+   - port
+   
+b. Pada programming sendiri menambahkan konfigurasi diatas kelas yang digunakan.
+
+    @Configuration
+    public class abcd
+    {
+      -------------------
+    }
+    
+c. membuat connectionFactory
+
+    @Bean
+    public ConnectionFactory connectionFactory()
+    {
+        AbstractConnectionFactory connectionFactory = new CachingConnectionFactory();
+        connectionFactory.setUsername(username);
+        connectionFactory.setPassword(password);
+        connectionFactory.setPort(port);
+        connectionFactory.setVirtualHost(virtualHost);
+        connectionFactory.setHost(host);
+        return connectionFactory;
+    }
+  
+  apabila deklarasi connection tidak dilakukan maka secara default akan menggunakan settingan awal.
+  
+d. membuat message converter dengan, 
+  
+    @Bean
+    public MessageConverter messageConverter()
+    {
+        return new Jackson2JsonMessageConverter();
+    }
+  
+  ------------------------------------------------------------------------------------------------
+
+  membuat konfigurasi Binding Queue
+  
+  sebelum mambuat queue dan binding harus di perhatikan Exchange yang akan digunakan, pada rabbit mq terdapat 4 jenis exchange
+  yaitu :
+  - direct
+  - fanout
+  - topic
+  - header
+ 
+ untuk exchange direct yang diperlukan adalah
+ 1. QUEUE
+ 2. BINDING
+ 3. ROUTING KEY
+ 
+ sedangkan exchange adalah agen yang bertugas untuk "routing" atau membuat jalur komunikasi pesan untuk queue yang berbeda
+ "alamat". Jadi pesan diterima dari producer ke exchange , dan selanjutnya dari exchange diteruskan ke queue berdasarkan 
+ "alamat-nya". Inilah yang dinamakan publishing method. 
+ 
+ QUEUE adalah sebuah antrian pesan yang diterima dari exchange berdasarkan bindingg dan routing key (jika ada). 
+ Binding adalah "link" yang menghubungkan antara QUEUE dan Exchange. 
+ Routing key adalah sebuah jalur dari queue. 
+ 
+ ---------------------------------------------------------
+    @Bean
+    Queue cobaQueue()
+    {
+        return new Queue(cobaQueue,true,false,false);
+    }
+
+    @Bean
+    DirectExchange cobaExchange()
+    {
+        return new DirectExchange(directExchange,true,false);
+    }
+
+    @Bean
+    Binding cobaBinding()
+    {
+        return BindingBuilder.bind(cobaQueue()).to(cobaExchange()).with(routingkeyDirect);
+    }
+
+    @Bean
+    AmqpTemplate directExchange(ConnectionFactory connectionFactory, MessageConverter messageConverter)
+    {
+        RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
+        rabbitTemplate.setMessageConverter(messageConverter);
+        rabbitTemplate.setExchange(directExchange);
+        return rabbitTemplate;
+    }
+
+    @PostConstruct
+    void init()
+    {
+        amqpAdmin.declareQueue(cobaQueue());
+        amqpAdmin.declareExchange(cobaExchange());
+        amqpAdmin.declareBinding(cobaBinding());
+    }
+
+ ---------------------------------------
+ 
+ CONSUMER
+ 
+ dalam membuat consumer langkah pertama yang harus dilakuakn adalah membuat koneksi. 
+ 
+ Koneksi yang dibuat sama dengan koneksi producer. 
+ Koneksi messageconverter. 
+ Kemudian SimpleRabbitListener
+
+     @Bean
+    SimpleRabbitListenerContainerFactory createListener(ConnectionFactory connectionFactory)
+    {
+        SimpleRabbitListenerContainerFactory containerFactory =
+                new SimpleRabbitListenerContainerFactory();
+
+        containerFactory.setConnectionFactory(connectionFactory);
+
+        containerFactory.setMaxConcurrentConsumers(10);
+
+        containerFactory.setConcurrentConsumers(5);
+        containerFactory.setAutoStartup(true);
+        containerFactory.setMessageConverter(messageConverter());
+        containerFactory.setPrefetchCount(1);
+        containerFactory.setDefaultRequeueRejected(false);
+        return containerFactory;
+    }
+ 
+ 
+ // https://github.com/senolatac/rabbitmq-spring-boot/blob/master/src/main/java/com/sha/rabbitmqtutorial/consumer/ConsumerController.java
+ 
+  
