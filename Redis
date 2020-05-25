@@ -1,0 +1,110 @@
+Redis adalah singkatan dari Remote DIctionary Server. arti dictionary sama dengan struktur data dictionary, Didalam java struktur data 
+dictionary sama dengan MAP (berbasis Key dan value) . Dan Server maksudnya adalah berbasis sebagai server seperti mysql, postgre sql yang running/
+jalan sebagai server. Data yang kita simpan didalam redis akan disimpan didalam memori. 
+
+Redis jarang dijadikan sebagai database utama. 
+
+------------
+Apa itu key dan value? 
+Key dan value berbeda dengan relational DB. key berperan sebagai primary key dan value sebagai isi dari datanya. 
+
+------------ 1
+Menggunakan redis didalam springboot. 
+
+untuk menggunakan redis di spring boot langkah pertama yang dilakukan adalah menambahkan dependency Redis 
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-redis</artifactId>
+			<version>2.3.0.RELEASE</version>
+		</dependency>
+    
+ ------------ 2
+ membuat koneksi redis. 
+ 
+ Untuk membuat konfiogurasi, dapat dilakukan didalam class main spring boot atau dapat membuat kelas sendiri dengan menambakan @Configuration diatasnya
+ contoh :
+ 
+ @Configuration
+ public class RedisConfig()
+ {
+    
+ }
+ 
+ Koneksi pada redis bisa dilakukan dengan 2 cara 
+  - Jedis
+  - Lettuce
+  
+ 1. Jedis
+ 
+     @Bean
+    JedisConnectionFactory jedisConnectionFactory()
+    {
+        RedisStandaloneConfiguration redisStandaloneConfiguration = new RedisStandaloneConfiguration();
+        redisStandaloneConfiguration.setHostName("localhost");
+        redisStandaloneConfiguration.setPort(6379);
+        return new JedisConnectionFactory(redisStandaloneConfiguration);
+    }
+    
+    apabila Hostname dan port tidak didefinisikan maka secara default jedis akan menggunakan port dan host default. 
+    
+ ------------ 3
+Membuat Redis template, redis template adalah sebuah entry kelas yang di sediakan oleh spring data yang digunakan untuk berinteraksi
+dengan Redis Server. Koneksi yang telah dibuat sebelumnya akan digunakan pada Redis template ini. 
+
+Setelah redis template dideklarasikan, Redis template akan menjadi abstraksi utama operasi redis yang dapat kita perintah.
+Ia juga menangani serialisasi dan deserialisasi objek ke byte array. 
+
+Secara default Redis template menggunakan JdkSerialisationRedisSerializer untuk menangani serialisasi dan deserialisasi objek. 
+
+namun mekanisme serialisasi pada RedisTemplate dapat diubah dan redis menawarkan serialisasi pada ....serializer package
+
+    @Bean
+    RedisTemplate<String, Student> redisTemplate()
+    {
+        RedisTemplate<String, Student> redisTemplate = new RedisTemplate<>();
+        redisTemplate.setConnectionFactory(jedisConnectionFactory());
+        return redisTemplate;
+    }
+    
+------------- 4
+Operasi pada redis crud, 
+Untuk mendukung variasi operasi yang berbeda tipe datanya , redis template menyediakan kelas operasi seperti
+
+ValueOperations, ListOperations, SetOperations, HashOperations, StreamOperations. 
+
+Pada saat ini saya menggunkan operasi HASHOPERATIONS, 
+
+HASHOPERATIONS. 
+
+Redis hash pada menampung sejumlah pasangan key-value dan dirancang untuk menggunakan lebih sedikit memori, menjadikannya
+cara yang hebat untuk menyimpan objek dalam memori. Untuk menggunakan nya, menggunakan bantuan HashOperations untuk melakukan
+manipulasi.
+
+    private RedisTemplate redisTemplate;
+
+    @Autowired
+    public void setRedisTemplate(RedisTemplate redisTemplate) {
+        this.redisTemplate = redisTemplate;
+    }
+
+    private HashOperations hashOperations;
+
+    @PostConstruct
+    public void setHashOperations() {
+        hashOperations = redisTemplate.opsForHash();
+    }
+    
+    Jenis operasi yang dapat digunakan pada HashOperations. 
+    
+    .put(Key,key1,value1) -> digunakan untuk meyinpan data
+    
+    seperti pada tipe data hash pada redis, struktur data hash disipman key=merupakan Keynya dan, key1 dan value1 adalah 
+    pasangan key dan value. 
+    
+    .entries(Key) -> digunakan untuk menampilkan semua data.
+   .get(Key,key1) -> menampilkan data dengan key tertentu dan pasangan key ke 1. 
+   .delete(Key,key1) -> menghapus data dengan key tertentu dan pasangan key ke 1.
+    
+    
+
